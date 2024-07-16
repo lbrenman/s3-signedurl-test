@@ -46,6 +46,8 @@ app.post('/upload', async (req, res) => {
     // Decode the base64 string
     const buffer = Buffer.from(base64String, 'base64');
 
+    let uploadSuccess = false;
+
     try {
         // Upload the image to S3
         const putObjectCommand = new PutObjectCommand({
@@ -56,24 +58,43 @@ app.post('/upload', async (req, res) => {
         });
         await s3Client.send(putObjectCommand);
 
-        // Generate a pre-signed URL for the uploaded file
-        const getObjectCommand = new GetObjectCommand({
-            Bucket: bucketName,
-            Key: fileName
-        });
-        const signedUrl = await getSignedUrl(s3Client, getObjectCommand, { expiresIn: 3600 });
-
-        res.json({
-            message: 'Successfully uploaded image and generated URL',
-            fileName: fileName,
-            url: signedUrl
-        });
+        uploadSuccess = true;
+        
     } catch (err) {
         console.error('Error uploading image and generating URL:', err);
-        res.status(500).json({
-            message: 'Failed to upload image and generate URL',
-            error: err.message
-        });
+        
+    } finally {
+
+        try {
+
+            // Generate a pre-signed URL for the uploaded file
+            const getObjectCommand = new GetObjectCommand({
+                Bucket: bucketName,
+                Key: fileName
+            });
+            const signedUrl = await getSignedUrl(s3Client, getObjectCommand, { expiresIn: 3600 });
+
+            if (uploadSuccess) {
+                res.json({
+                    message: 'Successfully uploaded image and generated URL',
+                    fileName: fileName,
+                    url: signedUrl
+                });
+            } else {
+                res.status(500).json({
+                    message: 'Failed to upload image and generate URL',
+                    error: err.message
+                });
+            }
+
+        } catch (err) {
+            console.error('Error generating signed URL:', err);
+            res.status(500).json({
+                message: 'Failed to upload image and generate URL',
+                error: err.message
+            });
+        }
+
     }
 });
 
