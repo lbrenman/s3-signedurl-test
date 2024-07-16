@@ -72,7 +72,7 @@ app.post('/upload', async (req, res) => {
                 Bucket: bucketName,
                 Key: fileName
             });
-            const signedUrl = await getSignedUrl(s3Client, getObjectCommand, { expiresIn: 3600 });
+            const signedUrl = await getSignedUrl(s3Client, getObjectCommand, { expiresIn: process.env.SIGNEDURLTIME });
 
             if (uploadSuccess) {
                 res.json({
